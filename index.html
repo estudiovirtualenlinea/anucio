@@ -100,8 +100,84 @@
     }
     .titulo { margin: 5px 0 18px; color: var(--dorado); font-size: clamp(2rem, 7vw, 4rem); font-weight: 1000; text-transform: uppercase; text-shadow: 3px 3px #111; }
     .subtitulo { margin: -13px 0 18px; color: #fff; font-size: clamp(1rem, 3vw, 1.4rem); font-weight: 900; }
+    .guia-clic {
+      display: inline-block;
+      margin: 0 auto 14px;
+      padding: 8px 16px;
+      color: #fff;
+      border: 2px dashed var(--dorado);
+      border-radius: 24px;
+      background: rgba(255, 216, 74, .14);
+      font-size: clamp(.9rem, 2.5vw, 1.05rem);
+      font-weight: 900;
+      cursor: pointer;
+      animation: pulso-guia 1.8s ease-in-out infinite;
+    }
+    .guia-clic.seleccionado {
+      border-style: solid;
+      background: rgba(255, 216, 74, .25);
+      box-shadow: 0 0 20px rgba(255,216,74,.5);
+    }
+    .guia-detalle {
+      display: none;
+      max-width: 630px;
+      margin: -4px auto 18px;
+      padding: 16px 20px;
+      color: #fff4c2;
+      border: 2px solid rgba(255,216,74,.8);
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(1, 48, 34, .94), rgba(9, 91, 62, .94));
+      box-shadow: 0 8px 22px rgba(0,0,0,.35), 0 0 15px rgba(255,216,74,.2);
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(.98rem, 2.4vw, 1.12rem);
+      font-style: italic;
+      font-weight: 700;
+      line-height: 1.45;
+      text-align: center;
+    }
+    .guia-detalle.visible {
+      display: block;
+      animation: aparecer .45s ease;
+    }
+    .guia-detalle div + div { margin-top: 8px; }
+    .guia-detalle div:first-child {
+      color: #fff;
+      font-size: 1.18em;
+      font-style: normal;
+      font-weight: 900;
+    }
+    @keyframes pulso-guia {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(255,216,74,0); }
+      50% { transform: scale(1.035); box-shadow: 0 0 18px rgba(255,216,74,.35); }
+    }
     .cuerpo { display: grid; grid-template-columns: 1.2fr .8fr; gap: 18px; align-items: start; text-align: left; }
     .lista { display: grid; gap: 8px; }
+    /* Indicador visual para señalar que estos letreros se pueden desplegar */
+    .item, .precio, .bono, .accion { position: relative; }
+    .item::after, .precio::after, .bono::after, .accion::after {
+      content: "↗";
+      position: absolute;
+      top: 7px;
+      right: 12px;
+      z-index: 2;
+      color: var(--dorado);
+      font-size: 1.35rem;
+      font-weight: 900;
+      line-height: 1;
+      text-shadow: 0 0 8px rgba(255,216,74,.8);
+      pointer-events: none;
+      animation: flecha-rebote 1.25s ease-in-out infinite;
+    }
+    .precio::after { top: 25px; right: 24px; font-size: 1.6rem; }
+    .bono::after { top: 10px; right: 10px; }
+    .accion::after { top: 6px; right: 7px; font-size: 1rem; }
+    .item:hover, .precio:hover, .bono:hover, .accion:hover {
+      box-shadow: 0 9px 22px rgba(0,0,0,.35), 0 0 18px rgba(255,216,74,.42);
+    }
+    @keyframes flecha-rebote {
+      0%, 100% { transform: translate(0, 0); opacity: .7; }
+      50% { transform: translate(4px, 4px) scale(1.18); opacity: 1; }
+    }
     .item {
       display: flex;
       flex-wrap: wrap;
@@ -332,6 +408,15 @@
       <div class="titulo">Prepárate hoy</div>
       <p class="subtitulo">Practica, evalúate y repasa tus errores</p>
 
+      <p class="guia-clic" id="guiaClic" role="button" tabindex="0" aria-expanded="false" aria-controls="detalleGuia">👆 Haz clic en cada letrero y descubre más información</p>
+      <div class="guia-detalle" id="detalleGuia" role="region" aria-label="Información de seguridad y soporte">
+        <div>🔒 Estudia con total seguridad</div>
+        <div>Creador visible: Plataforma desarrollada y respaldada por Fernando TACO VILLANUEVA.</div>
+        <div>Pago único y transparente: Sin mensualidades ni cargos sorpresa.</div>
+        <div>Pagas una vez y el acceso es tuyo.</div>
+        <div>Soporte directo: ¿Tienes dudas o problemas con tu acceso? Te atendemos personalmente por WhatsApp al 989721207.</div>
+        <div>Este aplicativo y su soporte técnico directo estarán vigentes hasta el 1 de febrero de 2027. Tomamos esta medida debido a que en 2027 se publicará un nuevo balotario oficial, por lo que el contenido actual dejará de ser útil para los próximos procesos de ascenso. ¡Aprovecha al máximo la plataforma durante este periodo!</div>
+      </div>
       <section class="cuerpo">
         <div class="lista">
           <div class="item" role="button" tabindex="0"><span class="icono">📝</span><span>Genera tus exámenes y simulacros</span><div class="detalle-letrero">📝 SIMULADOR DE EXAMEN<br>✅ Preguntas aleatorias igual que en el examen real<br>⏱️ Cronómetro en tiempo real<br>✅ Resultados inmediatos con porcentaje y detalle<br>🔁 Repaso automático de errores: vuelve a practicar las que fallaste</div></div>
@@ -364,12 +449,36 @@
   </main>
 <script>
   // Cada letrero se mueve al acercarse y despliega su información al hacer clic.
+  // Sonido breve de acierto, generado en el navegador para no depender de archivos externos.
+  let contextoAudio;
+  function sonidoAcierto() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    contextoAudio = contextoAudio || new AudioContext();
+    if (contextoAudio.state === 'suspended') contextoAudio.resume();
+    const ahora = contextoAudio.currentTime;
+    [659.25, 783.99, 1046.5].forEach((frecuencia, indice) => {
+      const oscilador = contextoAudio.createOscillator();
+      const volumen = contextoAudio.createGain();
+      oscilador.type = 'sine';
+      oscilador.frequency.value = frecuencia;
+      volumen.gain.setValueAtTime(0.0001, ahora + indice * 0.08);
+      volumen.gain.exponentialRampToValueAtTime(0.16, ahora + indice * 0.08 + 0.02);
+      volumen.gain.exponentialRampToValueAtTime(0.0001, ahora + indice * 0.08 + 0.28);
+      oscilador.connect(volumen);
+      volumen.connect(contextoAudio.destination);
+      oscilador.start(ahora + indice * 0.08);
+      oscilador.stop(ahora + indice * 0.08 + 0.3);
+    });
+  }
+
   document.querySelectorAll('.item, .bono, .accion, .precio').forEach((letrero) => {
     const alternar = () => {
       const visible = letrero.classList.toggle('seleccionado');
       if (letrero.hasAttribute('aria-expanded')) {
         letrero.setAttribute('aria-expanded', String(visible));
       }
+      if (visible) sonidoAcierto();
     };
     letrero.addEventListener('click', alternar);
     letrero.addEventListener('keydown', (evento) => {
@@ -380,6 +489,21 @@
     });
   });
 
+  const guiaClic = document.getElementById('guiaClic');
+  const detalleGuia = document.getElementById('detalleGuia');
+  function alternarGuia() {
+    const visible = guiaClic.classList.toggle('seleccionado');
+    detalleGuia.classList.toggle('visible', visible);
+    guiaClic.setAttribute('aria-expanded', String(visible));
+    if (visible) sonidoAcierto();
+  }
+  guiaClic.addEventListener('click', alternarGuia);
+  guiaClic.addEventListener('keydown', (evento) => {
+    if (evento.key === 'Enter' || evento.key === ' ') {
+      evento.preventDefault();
+      alternarGuia();
+    }
+  });
 
   const letreroQr = document.getElementById('letreroQr');
   const ventanaQr = document.getElementById('ventanaQr');
